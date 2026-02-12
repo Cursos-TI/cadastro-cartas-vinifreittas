@@ -31,7 +31,7 @@ void salvar_dados(Carta dados) {
 int main() {
     Carta dados;
 
-    setlocale(LC_ALL, "Portuguese_Brazil");
+    setlocale(LC_ALL, "pt_BR.UTF-8");
     system("cls");
 
     printf("Bem-vindo ao sistema de cadastro de cartas!\n");
