@@ -1,13 +1,15 @@
 // ==================================================================
 // Super Trunfo - Países
-// Tema 2.5 (extra) - Extensão
-// Objetivo: Melhorar o código, adicionando funcionalidades, graficos e estrutura.
+// Tema 6.5 (extra) - Implementação do modo partida e melhorias
+// Objetivo: Implementar o modo partida e funcionalidades adjacentes, e melhorar o código.
 // ==================================================================
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <locale.h>
+#include <time.h>
+#include <stdarg.h>
 
 // Constantes
 #define ARQUIVO_REGISTRO "registro.bin"
@@ -37,6 +39,7 @@ typedef struct {
 typedef struct {
     Carta* cartas;
     size_t tamanho;
+    size_t capacidade;
 } Lista_de_cartas;
 
 
@@ -44,14 +47,28 @@ typedef struct {
 /* ========================== Utilitários ========================== */
 
 
+Lista_de_cartas inicializar() {
+    return (Lista_de_cartas) {NULL, 0, 0};
+}
+
+void alocar_espaco(Lista_de_cartas *lista, size_t quantidade) {
+    lista->capacidade += quantidade;
+    lista->cartas = realloc(lista->cartas, sizeof(Carta) * lista->capacidade);
+}
+
+void finalizar(Lista_de_cartas *lista) {
+    free(lista->cartas);
+    *lista = (Lista_de_cartas) {NULL, 0, 0};
+}
+
 // Retorna uma lista com todos os registros.
 Lista_de_cartas listar_cartas() {
-    Lista_de_cartas lista = {NULL, 0};;
+    Lista_de_cartas lista = inicializar();
     FILE *registro = fopen(ARQUIVO_REGISTRO, "rb");
 
     Carta temp;
     while (fread(&temp, sizeof(Carta), 1, registro)) {
-        lista.cartas = realloc(lista.cartas, sizeof(Carta) * (lista.tamanho + 1));
+        alocar_espaco(&lista, 1);
         lista.cartas[lista.tamanho] = temp;
         lista.tamanho++;
     }
@@ -77,8 +94,42 @@ void excluir_dados(char codigo[10]) {
             fwrite(&lista.cartas[i], sizeof(Carta), 1, registro);
         }
     }
-    free(lista.cartas);
+    finalizar(&lista);
     fclose(registro);
+}
+
+// Embaralha lista de cartas.
+void embaralhar_lista(Lista_de_cartas *lista) {
+    if (!lista || lista->tamanho <= 1) return;
+
+    for (size_t i = 0; i < lista->tamanho; i++){
+        size_t aleatorio = (size_t) rand() % lista->tamanho;
+
+        Carta temp = lista->cartas[aleatorio];  
+        lista->cartas[aleatorio] = lista->cartas[i];
+        lista->cartas[i] = temp;
+    } 
+}
+
+// Porciona lista de cartas.
+Lista_de_cartas porcionar_lista(Lista_de_cartas lista, int numero_de_porcoes, int porcao) {
+    Lista_de_cartas mao = inicializar();
+
+    int tamanho_ajustado = (lista.tamanho % 2) ? lista.tamanho - 1 : lista.tamanho; // Garante que a lista tenha um tamanho par.
+
+    size_t cartas_por_porcao = (size_t) tamanho_ajustado / numero_de_porcoes;
+    alocar_espaco(&mao, cartas_por_porcao);
+    
+    int indice_inicial = (cartas_por_porcao) * (porcao - 1);
+    memcpy(mao.cartas, lista.cartas + indice_inicial, sizeof(Carta) * cartas_por_porcao); // Copia o bloco de cartas pra mao.
+    
+    mao.tamanho = cartas_por_porcao;
+    return mao;
+}
+
+void imprimir_mensagem(char *msg, char *formatação) {
+    printf("\n %s%s%s \n", formatação, msg, RESET); 
+    sleep(2);
 }
 
 void limpar_tela() {
@@ -91,7 +142,7 @@ void limpar_tela() {
 
 
 // Cadastro.
-void cadastrar_carta() {
+void cadastrar_carta(void) {
     Carta dados;
     limpar_tela();
 
@@ -118,32 +169,28 @@ void cadastrar_carta() {
 
     dados.densidade_populacional = (float) dados.populacao / dados.area;
     dados.pib_per_capita = (float) (dados.pib * 1000000000) / dados.populacao;
-    
     sprintf(dados.codigo, "%c%02i", dados.estado, dados.cidade);
 
     salvar_dados(dados);
-    printf("\n %s Carta registrada com sucesso! %s \n", VERDE, RESET);
-    sleep(2);
+    imprimir_mensagem("Carta registrada com sucesso!", VERDE);
 }
 
 // Remoção.
 void remover_carta() {
     char codigo[10];
 
-    printf("\n\n");
-    printf("Qual o código da carta? -> ");
+    printf("\nQual o código da carta? -> ");
     scanf("%s", codigo);
 
     excluir_dados(codigo);
-    printf("\n %s Carta exluida com sucesso! %s \n", VERDE, RESET);
-    sleep(2);
+    imprimir_mensagem("Carta exluida com sucesso!", VERDE);
 }
 
 // Exibição
-void exibir_carta(Carta dados, const char *modo) {
+void exibir_carta(const Carta dados, const char *modo) {
 
-    if (strcmp(modo, "extendido") == 0) {
-        printf("Cidade %s %s %s \n\n", NEGRITO, dados.codigo, RESET);
+    if (strcmp(modo, "completo") == 0) {
+        printf("Cidade %s[%s]%s \n\n", AZUL, dados.codigo, RESET);
 
         printf("População: %u hab. \n", dados.populacao);
         printf("Área territorial: %.2f km² \n", dados.area);
@@ -164,40 +211,176 @@ void exibir_carta(Carta dados, const char *modo) {
     }
 }
 
+void distribuir_cartas(int qtd_jogadores, ...) {
+    va_list args;
+    va_start(args, qtd_jogadores);
+    
+    Lista_de_cartas lista = listar_cartas();
+    if (lista.tamanho < qtd_jogadores) {
+        imprimir_mensagem("Cartas insuficientes!", NEGRITO);
+        return;
+    } else if (qtd_jogadores < 2) {
+        imprimir_mensagem("Jogadores insuficientes!", NEGRITO);
+        return;
+    }
+    
+    embaralhar_lista(&lista);
+
+    printf("Cartas distribuídas!\n"); 
+    for (int i = 1; i <= qtd_jogadores; i++) {
+        Lista_de_cartas *jogador = va_arg(args, Lista_de_cartas *);
+
+        *jogador = porcionar_lista(lista, qtd_jogadores, i);
+        printf("Player %i recebeu %zu cartas.\n", i, jogador->tamanho);
+    }
+    va_end(args);
+
+    finalizar(&lista);
+    sleep(2);
+}
+
+int competir_atributo(int atributo, Carta carta, Carta carta_inimiga) {
+    limpar_tela();
+    int p1, p2;
+    
+    switch (atributo) {
+            case 1: // População.
+                printf("População: %u  VS  %u", carta.populacao, carta_inimiga.populacao);
+                p1 = carta.populacao > carta_inimiga.populacao;
+                p2 = carta.populacao < carta_inimiga.populacao; break;
+            
+            case 2: // Área
+                printf("Área: %.2f  VS  %.2f", carta.area, carta_inimiga.area);
+                p1 = carta.area > carta_inimiga.area; 
+                p2 = carta.area < carta_inimiga.area; break;
+            
+            case 3: // PIB
+                printf("PIB: %.2f  VS  %.2f", carta.pib, carta_inimiga.pib);
+                p1 = carta.pib > carta_inimiga.pib;
+                p2 = carta.pib < carta_inimiga.pib; break;
+
+            case 4: // Pontos turisticos
+                printf("Pontos turisticos: %i  VS  %i", carta.pontos_turisticos, carta_inimiga.pontos_turisticos);
+                p1 = carta.pontos_turisticos > carta_inimiga.pontos_turisticos;
+                p2 = carta.pontos_turisticos < carta_inimiga.pontos_turisticos; break;
+            
+            case 5: // Densidade populacional
+                printf("Densidade populacional: %.2f  VS  %.2f", carta.densidade_populacional, carta_inimiga.densidade_populacional);
+                p1 = carta.densidade_populacional < carta_inimiga.densidade_populacional;
+                p2 = carta.densidade_populacional > carta_inimiga.densidade_populacional; break;
+
+            case 6: // PIB per capita
+                printf("PIB per capita: %.2f  VS  %.2f", carta.pib_per_capita, carta_inimiga.pib_per_capita);
+                p1 = carta.pib_per_capita > carta_inimiga.pib_per_capita; 
+                p2 = carta.pib_per_capita < carta_inimiga.pib_per_capita; break;
+
+            default:
+                imprimir_mensagem("\nAtributo inválido!", NEGRITO);
+                return -1;
+    }
+
+    if (p1) {
+        imprimir_mensagem("\nVocê ganhou a partida!", VERDE); return 1;
+    } else if (p2) {
+        imprimir_mensagem("\nPlayer 2 ganhou a partida!", VERMELHO); return 0;
+    } else {
+        imprimir_mensagem("\nHouve empate!", NEGRITO); return 11;
+    }
+}
+
+void trocar_cartas(Lista_de_cartas *devedor, Lista_de_cartas *recebedor) {
+    
+    Carta temp = devedor->cartas[0];
+
+    // Devedor perde a primeira carta.
+    for (size_t i = 0; i < (devedor->tamanho - 1); i++) {
+        devedor->cartas[i] = devedor->cartas[i + 1];
+    }
+    alocar_espaco(devedor, -1);
+    devedor->tamanho--;
+
+    // Recebedor ganha
+    alocar_espaco(recebedor, 1);
+    recebedor->cartas[recebedor->tamanho] = temp;
+    recebedor->tamanho++;
+}
+
 
 
 /* ========================== Menus ========================== */
 
 
 void iniciar_partida() {
+
+    // Distribuição das cartas
     limpar_tela();
-    printf("\n%s Em breve... %s\n", NEGRITO, RESET);
-    sleep(2);
+    
+    Lista_de_cartas player1 = inicializar();
+    Lista_de_cartas player2 = inicializar();
+
+    distribuir_cartas(2, &player1, &player2);
+
+    // Rodada
+    int atributo, rodada = 1;
+    while (player1.tamanho && player2.tamanho) {
+        Carta atual = player1.cartas[(rodada - 1) % player1.tamanho];
+        Carta atual_inimigo = player2.cartas[(rodada - 1) % player2.tamanho];
+
+        limpar_tela();
+
+        printf("%s Rodada %i (Placar P1 %i x P2 %i) %s\n", NEGRITO, rodada, player1.tamanho, player2.tamanho, RESET);
+
+        printf("\n");
+        exibir_carta(atual, "completo");
+        printf("\n");
+
+        printf(" 1 - População \n");
+        printf(" 2 - Área \n");
+        printf(" 3 - PIB \n");
+        printf(" 4 - Pontos turisticos \n");
+        printf(" 5 - Densidade populacional \n");
+        printf(" 6 - PIB per capita \n");
+
+        printf("\nEscolha uma atributo para competir -> ");
+        scanf("%i", &atributo);
+        
+        // Competição
+        int resultado = competir_atributo(atributo, atual, atual_inimigo);
+        if (resultado == -1) { continue; }
+        if (resultado == 11) { rodada++; continue; }
+
+        resultado ? trocar_cartas(&player2, &player1) : trocar_cartas(&player1, &player2);
+        
+        rodada++;
+    }
+
+    finalizar(&player1); 
+    finalizar(&player2);
 }
 
 void gerenciar_cartas() {
     int escolha, rodando = 1;
-
+    
     while(rodando) {
         Lista_de_cartas lista = listar_cartas();
+        
         limpar_tela();
 
         printf("%sSistema de Gerenciamento de Cartas%s\n", NEGRITO, RESET);
 
-        printf("\nTotal de cartas: %zu\n", lista.tamanho);
+        printf("\nTotal de cartas: %zu\n\n\n", lista.tamanho);
 
-        if (lista.tamanho == 0) {
-            printf("\n\nNenhuma carta cadastrada!\n");
+        if (!lista.tamanho) {
+            printf("Nenhuma carta cadastrada!\n\n\n");
         } else {
             for (size_t i = 0; i < lista.tamanho; i++) {
-                printf("\n\n");
                 exibir_carta(lista.cartas[i], "simplificado");
+                printf("\n\n");
             }
         } 
 
-        free(lista.cartas);
+        finalizar(&lista);
 
-        printf("\n\n");
         printf(" 1 - Cadastrar carta \n"); 
         printf(" 2 - Remover carta \n");
         printf(" 3 - Voltar ao Menu principal \n");
@@ -206,17 +389,18 @@ void gerenciar_cartas() {
         scanf("%i", &escolha);
 
         switch (escolha) {
-                case 1: cadastrar_carta(); break;
-                case 2: remover_carta(); break;
-                case 3: rodando = 0; break;
+            case 1: cadastrar_carta(); break;
+            case 2: remover_carta(); break;
+            case 3: rodando = 0; break;
         }
     }
 }
 
 int main() {
     setlocale(LC_ALL, "pt_BR.UTF-8");
-    int escolha, rodando = 1;
+    srand(time(NULL));
 
+    int escolha, rodando = 1;
     while(rodando) {
         limpar_tela();
 
@@ -241,6 +425,6 @@ int main() {
             case 3: rodando = 0; break;
         }
     }
-    printf("\n %s Fechando o programa... %s \n\n", VERMELHO, RESET);
+    imprimir_mensagem("Fechando o programa...\n", VERMELHO);
     return 0;
 } 
