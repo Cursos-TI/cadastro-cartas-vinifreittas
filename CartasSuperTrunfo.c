@@ -16,7 +16,7 @@
 
 // Estilos de texto (ANSI)
 #define NEGRITO "\033[1m"
-#define NEGRITO_ITALICO_AZUL "\033[1;3;34m"
+#define ITALICO "\033[3m"
 #define AZUL "\033[1;34m"
 #define VERDE "\033[1;32m"
 #define VERMELHO "\033[1;31m"
@@ -79,7 +79,7 @@ Lista_de_cartas listar_cartas() {
 // Salva um registro.
 void salvar_dados(Carta dados) {
     FILE *registro = fopen(ARQUIVO_REGISTRO, "ab"); 
-    
+
     fwrite(&dados, sizeof(Carta), 1, registro);
     fclose(registro);
 }
@@ -350,7 +350,6 @@ void iniciar_partida() {
         if (resultado == 11) { rodada++; continue; }
 
         resultado ? trocar_cartas(&player2, &player1) : trocar_cartas(&player1, &player2);
-        
         rodada++;
     }
 
@@ -410,7 +409,7 @@ int main() {
         printf("%s    # #   # #     #    #  #       #   #  #  #   # #   # # #    #   # %s\n", NEGRITO, RESET);
         printf("%s #### ##### #     #### #   #      #   #   # ##### #    ## #    ##### %s\n", NEGRITO, RESET);
 
-        printf("\n%s=== MENU PRINCIPAL ===%s\n\n", NEGRITO_ITALICO_AZUL, RESET);
+        printf("\n%s%s=== MENU PRINCIPAL ===%s\n\n", AZUL, ITALICO, RESET);
 
         printf(" 1 - Jogar (PvP) \n"); 
         printf(" 2 - Gerenciar cartas \n");
