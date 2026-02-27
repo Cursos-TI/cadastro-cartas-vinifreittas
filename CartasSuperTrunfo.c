@@ -42,6 +42,20 @@ typedef struct {
     size_t capacidade;
 } Lista_de_cartas;
 
+// Codificação para o modo de exibição da carta.
+typedef enum {
+    COMPLETO,
+    SIMPLIFICADO
+} Modo_exibicao;
+
+// Codificação para o resultado da competição.
+typedef enum {
+    VITORIA,
+    DERROTA,
+    EMPATE,
+    ERRO
+} Resultado_competicao;
+
 
 
 /* ========================== Utilitários ========================== */
@@ -187,33 +201,36 @@ void remover_carta() {
 }
 
 // Exibição
-void exibir_carta(const Carta dados, const char *modo) {
+void exibir_carta(const Carta dados, Modo_exibicao modo) {
+    switch (modo) {
+        case COMPLETO:
+            printf("Cidade %s[%s]%s \n\n", AZUL, dados.codigo, RESET);
 
-    if (strcmp(modo, "completo") == 0) {
-        printf("Cidade %s[%s]%s \n\n", AZUL, dados.codigo, RESET);
+            printf("População: %u hab. \n", dados.populacao);
+            printf("Área territorial: %.2f km² \n", dados.area);
+            printf("PIB: %.2f bilhões \n", dados.pib);
+            printf("N° de pontos turisticos: %i \n\n", dados.pontos_turisticos);
 
-        printf("População: %u hab. \n", dados.populacao);
-        printf("Área territorial: %.2f km² \n", dados.area);
-        printf("PIB: %.2f bilhões \n", dados.pib);
-        printf("N° de pontos turisticos: %i \n\n", dados.pontos_turisticos);
-
-        printf("Densidade populacional: %.2f hab. por km² \n", dados.densidade_populacional);
-        printf("PIB per capita: %.2f reais \n\n", dados.pib_per_capita);
+            printf("Densidade populacional: %.2f hab. por km² \n", dados.densidade_populacional);
+            printf("PIB per capita: %.2f reais \n\n", dados.pib_per_capita);
         
-    } else if (strcmp(modo, "simplificado") == 0) {
-        char codigo[20];
-        sprintf(codigo, "%s[%s]%s", AZUL, dados.codigo, RESET);
+        case SIMPLIFICADO:
+            char codigo[20];
+            sprintf(codigo, "%s[%s]%s", AZUL, dados.codigo, RESET);
 
-        printf("%-15s População: %u hab.\n", codigo, dados.populacao);
-        printf("%-5s Área: %.2f km²\n", "", dados.area);
-        printf("%-5s PIB: %.2f bi.\n", "", dados.pib);
-        printf("%-5s Pontos turísticos: %i\n", "", dados.pontos_turisticos);
+            printf("%-15s População: %u hab.\n", codigo, dados.populacao);
+            printf("%-5s Área: %.2f km²\n", "", dados.area);
+            printf("%-5s PIB: %.2f bi.\n", "", dados.pib);
+            printf("%-5s Pontos turísticos: %i\n", "", dados.pontos_turisticos);
     }
 }
 
+// Distribuição
 void distribuir_cartas(int qtd_jogadores, ...) {
     va_list args;
     va_start(args, qtd_jogadores);
+
+    limpar_tela();
     
     Lista_de_cartas lista = listar_cartas();
     if (lista.tamanho < qtd_jogadores) {
@@ -239,57 +256,58 @@ void distribuir_cartas(int qtd_jogadores, ...) {
     sleep(2);
 }
 
-int competir_atributo(int atributo, Carta carta, Carta carta_inimiga) {
-    limpar_tela();
+// Competição
+Resultado_competicao competir_atributo(int atributo, Carta carta, Carta oponente) {
     int p1, p2;
+    limpar_tela();
     
     switch (atributo) {
             case 1: // População.
-                printf("População: %u  VS  %u", carta.populacao, carta_inimiga.populacao);
-                p1 = carta.populacao > carta_inimiga.populacao;
-                p2 = carta.populacao < carta_inimiga.populacao; break;
+                printf("População: %u  VS  %u", carta.populacao, oponente.populacao);
+                p1 = carta.populacao > oponente.populacao;
+                p2 = carta.populacao < oponente.populacao; break;
             
             case 2: // Área
-                printf("Área: %.2f  VS  %.2f", carta.area, carta_inimiga.area);
-                p1 = carta.area > carta_inimiga.area; 
-                p2 = carta.area < carta_inimiga.area; break;
+                printf("Área: %.2f  VS  %.2f", carta.area, oponente.area);
+                p1 = carta.area > oponente.area; 
+                p2 = carta.area < oponente.area; break;
             
             case 3: // PIB
-                printf("PIB: %.2f  VS  %.2f", carta.pib, carta_inimiga.pib);
-                p1 = carta.pib > carta_inimiga.pib;
-                p2 = carta.pib < carta_inimiga.pib; break;
+                printf("PIB: %.2f  VS  %.2f", carta.pib, oponente.pib);
+                p1 = carta.pib > oponente.pib;
+                p2 = carta.pib < oponente.pib; break;
 
             case 4: // Pontos turisticos
-                printf("Pontos turisticos: %i  VS  %i", carta.pontos_turisticos, carta_inimiga.pontos_turisticos);
-                p1 = carta.pontos_turisticos > carta_inimiga.pontos_turisticos;
-                p2 = carta.pontos_turisticos < carta_inimiga.pontos_turisticos; break;
+                printf("Pontos turisticos: %i  VS  %i", carta.pontos_turisticos, oponente.pontos_turisticos);
+                p1 = carta.pontos_turisticos > oponente.pontos_turisticos;
+                p2 = carta.pontos_turisticos < oponente.pontos_turisticos; break;
             
             case 5: // Densidade populacional
-                printf("Densidade populacional: %.2f  VS  %.2f", carta.densidade_populacional, carta_inimiga.densidade_populacional);
-                p1 = carta.densidade_populacional < carta_inimiga.densidade_populacional;
-                p2 = carta.densidade_populacional > carta_inimiga.densidade_populacional; break;
+                printf("Densidade populacional: %.2f  VS  %.2f", carta.densidade_populacional, oponente.densidade_populacional);
+                p1 = carta.densidade_populacional < oponente.densidade_populacional;
+                p2 = carta.densidade_populacional > oponente.densidade_populacional; break;
 
             case 6: // PIB per capita
-                printf("PIB per capita: %.2f  VS  %.2f", carta.pib_per_capita, carta_inimiga.pib_per_capita);
-                p1 = carta.pib_per_capita > carta_inimiga.pib_per_capita; 
-                p2 = carta.pib_per_capita < carta_inimiga.pib_per_capita; break;
+                printf("PIB per capita: %.2f  VS  %.2f", carta.pib_per_capita, oponente.pib_per_capita);
+                p1 = carta.pib_per_capita > oponente.pib_per_capita; 
+                p2 = carta.pib_per_capita < oponente.pib_per_capita; break;
 
             default:
                 imprimir_mensagem("\nAtributo inválido!", NEGRITO);
-                return -1;
+                return ERRO;
     }
 
     if (p1) {
-        imprimir_mensagem("\nVocê ganhou a partida!", VERDE); return 1;
+        imprimir_mensagem("\nVocê ganhou a partida!", VERDE); return VITORIA;
     } else if (p2) {
-        imprimir_mensagem("\nPlayer 2 ganhou a partida!", VERMELHO); return 0;
+        imprimir_mensagem("\nO oponente ganhou a partida!", VERMELHO); return DERROTA;
     } else {
-        imprimir_mensagem("\nHouve empate!", NEGRITO); return 11;
+        imprimir_mensagem("\nHouve empate!", NEGRITO); return EMPATE;
     }
 }
 
-void trocar_cartas(Lista_de_cartas *devedor, Lista_de_cartas *recebedor) {
-    
+// Transferir
+void transferir_carta(Lista_de_cartas *devedor, Lista_de_cartas *receptor) {
     Carta temp = devedor->cartas[0];
 
     // Devedor perde a primeira carta.
@@ -299,10 +317,10 @@ void trocar_cartas(Lista_de_cartas *devedor, Lista_de_cartas *recebedor) {
     alocar_espaco(devedor, -1);
     devedor->tamanho--;
 
-    // Recebedor ganha
-    alocar_espaco(recebedor, 1);
-    recebedor->cartas[recebedor->tamanho] = temp;
-    recebedor->tamanho++;
+    // Receptor ganha
+    alocar_espaco(receptor, 1);
+    receptor->cartas[receptor->tamanho] = temp;
+    receptor->tamanho++;
 }
 
 
@@ -313,8 +331,6 @@ void trocar_cartas(Lista_de_cartas *devedor, Lista_de_cartas *recebedor) {
 void iniciar_partida() {
 
     // Distribuição das cartas
-    limpar_tela();
-    
     Lista_de_cartas player1 = inicializar();
     Lista_de_cartas player2 = inicializar();
 
@@ -331,7 +347,7 @@ void iniciar_partida() {
         printf("%s Rodada %i (Placar P1 %i x P2 %i) %s\n", NEGRITO, rodada, player1.tamanho, player2.tamanho, RESET);
 
         printf("\n");
-        exibir_carta(atual, "completo");
+        exibir_carta(atual, COMPLETO);
         printf("\n");
 
         printf(" 1 - População \n");
@@ -345,11 +361,11 @@ void iniciar_partida() {
         scanf("%i", &atributo);
         
         // Competição
-        int resultado = competir_atributo(atributo, atual, atual_inimigo);
-        if (resultado == -1) { continue; }
-        if (resultado == 11) { rodada++; continue; }
+        Resultado_competicao resultado = competir_atributo(atributo, atual, atual_inimigo);
+        if (resultado == ERRO) { continue; }
+        if (resultado == EMPATE) { rodada++; continue; }
 
-        resultado ? trocar_cartas(&player2, &player1) : trocar_cartas(&player1, &player2);
+        (resultado == VITORIA) ? transferir_carta(&player2, &player1) : transferir_carta(&player1, &player2);
         rodada++;
     }
 
@@ -358,11 +374,10 @@ void iniciar_partida() {
 }
 
 void gerenciar_cartas() {
+
     int escolha, rodando = 1;
-    
     while(rodando) {
         Lista_de_cartas lista = listar_cartas();
-        
         limpar_tela();
 
         printf("%sSistema de Gerenciamento de Cartas%s\n", NEGRITO, RESET);
@@ -373,11 +388,10 @@ void gerenciar_cartas() {
             printf("Nenhuma carta cadastrada!\n\n\n");
         } else {
             for (size_t i = 0; i < lista.tamanho; i++) {
-                exibir_carta(lista.cartas[i], "simplificado");
+                exibir_carta(lista.cartas[i], SIMPLIFICADO);
                 printf("\n\n");
             }
-        } 
-
+        }
         finalizar(&lista);
 
         printf(" 1 - Cadastrar carta \n"); 
