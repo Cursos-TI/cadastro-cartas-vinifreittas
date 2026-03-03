@@ -93,22 +93,19 @@ Lista_de_cartas listar_cartas() {
 // Salva um registro.
 void salvar_dados(Carta dados) {
     FILE *registro = fopen(ARQUIVO_REGISTRO, "ab"); 
-
     fwrite(&dados, sizeof(Carta), 1, registro);
     fclose(registro);
 }
 
-// Exlui registro por código.
-void excluir_dados(char codigo[10]) {
-    Lista_de_cartas lista = listar_cartas();
+// Exlui registro por código, reescrevendo o registro.
+void excluir_dados(char codigo[10], const Lista_de_cartas *lista) {
     FILE *registro = fopen(ARQUIVO_REGISTRO, "wb");
 
-    for (size_t i = 0; i < lista.tamanho; i++) {
-        if (strcmp(lista.cartas[i].codigo, codigo) != 0) {
-            fwrite(&lista.cartas[i], sizeof(Carta), 1, registro);
+    for (size_t i = 0; i < lista->tamanho; i++) {
+        if (strcmp(lista->cartas[i].codigo, codigo) != 0) {
+            fwrite(&lista->cartas[i], sizeof(Carta), 1, registro);
         }
     }
-    finalizar(&lista);
     fclose(registro);
 }
 
@@ -155,7 +152,6 @@ void limpar_tela() {
 /* ========================== Funcionalidades ========================== */
 
 
-// Cadastro.
 void cadastrar_carta(void) {
     Carta dados;
     limpar_tela();
@@ -189,18 +185,16 @@ void cadastrar_carta(void) {
     imprimir_mensagem("Carta registrada com sucesso!", VERDE);
 }
 
-// Remoção.
-void remover_carta() {
+void remover_carta(Lista_de_cartas *lista) {
     char codigo[10];
 
     printf("\nQual o código da carta? -> ");
     scanf("%s", codigo);
 
-    excluir_dados(codigo);
+    excluir_dados(codigo, lista);
     imprimir_mensagem("Carta exluida com sucesso!", VERDE);
 }
 
-// Exibição
 void exibir_carta(const Carta dados, Modo_exibicao modo) {
     switch (modo) {
         case COMPLETO:
@@ -213,6 +207,7 @@ void exibir_carta(const Carta dados, Modo_exibicao modo) {
 
             printf("Densidade populacional: %.2f hab. por km² \n", dados.densidade_populacional);
             printf("PIB per capita: %.2f reais \n\n", dados.pib_per_capita);
+            break;
         
         case SIMPLIFICADO:
             char codigo[20];
@@ -222,10 +217,10 @@ void exibir_carta(const Carta dados, Modo_exibicao modo) {
             printf("%-5s Área: %.2f km²\n", "", dados.area);
             printf("%-5s PIB: %.2f bi.\n", "", dados.pib);
             printf("%-5s Pontos turísticos: %i\n", "", dados.pontos_turisticos);
+            break;
     }
 }
 
-// Distribuição
 void distribuir_cartas(int qtd_jogadores, ...) {
     va_list args;
     va_start(args, qtd_jogadores);
@@ -256,7 +251,6 @@ void distribuir_cartas(int qtd_jogadores, ...) {
     sleep(2);
 }
 
-// Competição
 Resultado_competicao competir_atributo(int atributo, Carta carta, Carta oponente) {
     int p1, p2;
     limpar_tela();
@@ -306,7 +300,6 @@ Resultado_competicao competir_atributo(int atributo, Carta carta, Carta oponente
     }
 }
 
-// Transferir
 void transferir_carta(Lista_de_cartas *devedor, Lista_de_cartas *receptor) {
     Carta temp = devedor->cartas[0];
 
@@ -394,7 +387,7 @@ void gerenciar_cartas() {
         }
         finalizar(&lista);
 
-        printf(" 1 - Cadastrar carta \n"); 
+        printf(" 1 - Cadastrar carta \n");
         printf(" 2 - Remover carta \n");
         printf(" 3 - Voltar ao Menu principal \n");
 
@@ -403,7 +396,7 @@ void gerenciar_cartas() {
 
         switch (escolha) {
             case 1: cadastrar_carta(); break;
-            case 2: remover_carta(); break;
+            case 2: remover_carta(&lista); break;
             case 3: rodando = 0; break;
         }
     }
